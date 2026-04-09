@@ -105,8 +105,8 @@ def lif_simulate_winner_takes_it_all(input_spikes, weights):
 # -----------------------------
 def predict_from_spikes(image, weights, T):  # Fuehrt fuer ein Bild die Spike-Kodierung, Simulation und Klassenvorhersage aus.
     input_spikes = image_to_spike_train(image, T)  # Kodiert das Bild in eine stochastische zeitliche Spike-Matrix.
-#    spike_times = lif_simulate(input_spikes, weights)  # gibt mir Output Spikes zurück, also wann welches Output-Neuron gefeuert hat
-    spike_times = lif_simulate_winner_takes_it_all(input_spikes, weights)  # gibt mir Output Spikes zurück, also wann welches Output-Neuron gefeuert hat
+    spike_times = lif_simulate(input_spikes, weights)  # gibt mir Output Spikes zurück, also wann welches Output-Neuron gefeuert hat
+#    spike_times = lif_simulate_winner_takes_it_all(input_spikes, weights)  # gibt mir Output Spikes zurück, also wann welches Output-Neuron gefeuert hat
     spike_counts = np.array([len(st) for st in spike_times])  # Zaehlt, wie viele Spikes jedes Output-Neuron insgesamt erzeugt hat.
 
     if spike_counts.max() == 0:  # Prueft den Spezialfall, dass kein einziges Output-Neuron gespiket hat.
