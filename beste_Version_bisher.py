@@ -19,11 +19,11 @@ A_minus = 0.0000015  # Grundstaerke der Long-Term Depression im STDP-Lernschritt
 w_max = 1.0  # Obergrenze fuer Gewichte, damit sie nicht unkontrolliert wachsen.
 w_min = 0.0  # Untergrenze fuer Gewichte, damit keine negativen Werte entstehen.
 
-epochs = 4  # Anzahl der vollstaendigen Trainingsdurchlaeufe ueber die Trainingsbeispiele.
-train_samples = 1000  # Anzahl der MNIST-Bilder, die fuer das Training verwendet werden.
-test_samples = 5000  # Anzahl der Testbilder aus dem Testbereich des Datensatzes.
+epochs = 20 # Anzahl der vollstaendigen Trainingsdurchlaeufe ueber die Trainingsbeispiele.
+train_samples = 2000  # Anzahl der MNIST-Bilder, die fuer das Training verwendet werden.
+test_samples = 2000  # Anzahl der Testbilder aus dem Testbereich des Datensatzes.
 val_start_idx = 50000  # Startindex des Validierungsbereichs innerhalb des Gesamtdatensatzes.
-val_samples = 1000  # Anzahl der Beispiele, die fuer die Validierung verwendet werden.
+val_samples = 300  # Anzahl der Beispiele, die fuer die Validierung verwendet werden.
 ausgabe_intervall = 500  # Anzahl der Trainingsschritte, nach denen ein Zwischenstand ausgegeben wird.
 
 # -----------------------------
@@ -85,11 +85,11 @@ def lif_simulate_winner_takes_it_all(input_spikes, weights):
 
     for t in range(T):
         I = (weights @ input_spikes[t]) / 8.0
-        V += (-V + I) / tau
+        V += (-V + I) / tau 
 
         fired = V >= V_th
         if fired.any():
-            winner = np.argmax(V)
+            winner = np.argmax(V) # Wählt das Neuron mit dem höchsten Potenzial als einzigen Gewinner aus, auch wenn mehrere den Schwellwert überschreiten.
             # alle anderen Neuronen werden zurückgesetzt
             for c in np.where(fired)[0]:
                 if c != winner:
@@ -105,8 +105,8 @@ def lif_simulate_winner_takes_it_all(input_spikes, weights):
 # -----------------------------
 def predict_from_spikes(image, weights, T):  # Fuehrt fuer ein Bild die Spike-Kodierung, Simulation und Klassenvorhersage aus.
     input_spikes = image_to_spike_train(image, T)  # Kodiert das Bild in eine stochastische zeitliche Spike-Matrix.
-    spike_times = lif_simulate(input_spikes, weights)  # gibt mir Output Spikes zurück, also wann welches Output-Neuron gefeuert hat
-#    spike_times = lif_simulate_winner_takes_it_all(input_spikes, weights)  # gibt mir Output Spikes zurück, also wann welches Output-Neuron gefeuert hat
+#    spike_times = lif_simulate(input_spikes, weights)  # gibt mir Output Spikes zurück, also wann welches Output-Neuron gefeuert hat
+    spike_times = lif_simulate_winner_takes_it_all(input_spikes, weights)  # gibt mir Output Spikes zurück, also wann welches Output-Neuron gefeuert hat
     spike_counts = np.array([len(st) for st in spike_times])  # Zaehlt, wie viele Spikes jedes Output-Neuron insgesamt erzeugt hat.
 
     if spike_counts.max() == 0:  # Prueft den Spezialfall, dass kein einziges Output-Neuron gespiket hat.
@@ -176,7 +176,7 @@ def evaluate_snn(images, labels, weights, start_idx, n_eval):  # Misst die Klass
 
     return correct / (end_idx - start_idx)  # Gibt die Accuracy als Anteil korrekter Vorhersagen zurueck.
 
-# -----------------------------
+# ----------------------------- 
 # Vor Training
 # -----------------------------
 initial_test_acc = evaluate_snn(images, labels, weights, 60000, test_samples)  # Bewertet das untrainierte Modell auf dem Testbereich.
@@ -184,6 +184,7 @@ print(f"Test-Accuracy vor Training: {initial_test_acc:.3f}")  # Gibt die Testgen
 
 best_weights = weights.copy()  # Prototypengewichte
 best_val_acc = evaluate_snn(images, labels, weights, val_start_idx, val_samples)  # Misst die Validierungsgenauigkeit des Startmodells.
+print(f"Validation-Accuracy vor Training: {best_val_acc:.3f}")  # Macht sichtbar, gegen welchen Ausgangswert spaeter verglichen wird.
 
 # -----------------------------
 # Training
@@ -213,13 +214,15 @@ for epoch in range(epochs):  # Startet die äußere Trainingsschleife über mehr
 
     print(f"Epoch {epoch+1}/{epochs} abgeschlossen | Train-Acc: {train_acc:.3f} | Val-Acc: {val_acc:.3f}")  # Gibt die zusammengefassten Metriken dieser Epoche aus.
 
+    previous_best_val_acc = best_val_acc  # Merkt sich den bisherigen Bestwert fuer eine transparente Log-Ausgabe.
+
     if val_acc > best_val_acc:  # Prueft, ob das aktuelle Modell besser validiert als alle bisherigen Modelle.
         best_val_acc = val_acc  # Aktualisiert den bisher besten Validierungswert.
         best_weights = weights.copy()  # Speichert die aktuellen Gewichte als neues bestes Modell.
-        print("  Neues bestes Modell gespeichert.")  # Meldet, dass ein neuer Bestwert gefunden wurde.
+        print(f"  Neues bestes Modell gespeichert ({previous_best_val_acc:.4f} -> {best_val_acc:.4f}).")  # Meldet transparent, um wie viel sich der Bestwert verbessert hat.
     else:  # Behandelt den Fall, dass sich das Modell auf der Validierung nicht verbessert hat.
         weights = best_weights.copy()  # Setzt die Gewichte auf das bisher beste Modell zurueck.
-        print("  Kein besseres Modell -> auf bestes Modell zurueckgesetzt.")  # Meldet das Zuruecksetzen auf den besten bekannten Stand.
+        print(f"  Kein besseres Modell ({val_acc:.4f} <= Bestwert {previous_best_val_acc:.4f}) -> auf bestes Modell zurueckgesetzt.")  # Zeigt explizit aktuellen und bisherigen Bestwert an.
 
 # Bestes Modell verwenden
 weights = best_weights.copy()  # Stellt sicher, dass fuer den Abschlusstest wirklich das beste Validierungsmodell genutzt wird.
